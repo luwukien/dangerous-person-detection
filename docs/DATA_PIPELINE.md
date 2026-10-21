@@ -103,7 +103,7 @@ An interrupted export is incomplete; select new output paths for a retry.
 
 Freeze the test set; do not use it to choose models or tune confidence thresholds.
 Unknown video provenance and undetected near duplicates remain explicit limitations.
-The historical README metrics do not apply to this new dataset.
+The historical metrics in the [agent context](AGENT_CONTEXT.md) do not apply to this new dataset.
 
 Optional Ultralytics reader smoke check (install Ultralytics separately for training):
 
