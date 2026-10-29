@@ -9,8 +9,8 @@ An auditable dataset preparation pipeline for person detection in images contain
 | Stage | Current implementation |
 | --- | --- |
 | Source collection | Download configured Kaggle datasets into `data/raw/` and record download outcomes. |
-| Image preparation | Normalize image orientation, preserve original files, collapse exact duplicates, and inventory source provenance. |
-| Human annotation | Review every visible person using YOLO boxes and explicit approval, exclusion, and grouping records. |
+| Image preparation | Normalize image orientation, preserve original files, collapse exact duplicates, and inventory source provenance; the Roboflow workflow also reads ZIP archives. |
+| Human annotation | Prepare images-only Roboflow upload batches, import COCO boxes into YOLO, and review every visible person with explicit approval, exclusion, and grouping records. |
 | Quality checks | Validate labels, image integrity, review status, and possible near-duplicate relationships before export. |
 | Dataset export | Create deterministic, group-aware `train` / `valid` / `test` splits, preview images, reports, and `config/data.yaml`. |
 
@@ -51,12 +51,59 @@ Export produces `data/dataset/` and `config/data.yaml`. Inspect `report.json` an
 
 For the annotation policy, review fields, provenance rules, retry options, and output details, follow the [dataset pipeline guide](docs/DATA_PIPELINE.md).
 
+### Annotate on Roboflow before splitting
+
+```powershell
+python scripts/roboflow_dataset.py prepare
+# Upload data/roboflow/upload/batch-0001.zip first for a small pilot.
+# Annotate on Roboflow, export COCO JSON without preprocessing/augmentation,
+# and extract the export into data/roboflow-export-pilot.
+python scripts/roboflow_dataset.py import --export data/roboflow-export-pilot
+```
+
+Inspect the imported box previews before uploading the remaining batches. This
+workflow reads loose images and ZIPs from `data/raw`, preserves all sources, and
+creates `data/roboflow/images` plus upload ZIPs without splitting the dataset.
+To upload at most 5,000 images (and no more than half of eligible images) from an
+existing `data/roboflow/images` directory, use the subset command below. It creates
+new images-only ZIPs under `data/roboflow/upload-selected` and leaves the originals
+untouched. Upload those ZIPs manually to your Roboflow Object Detection project.
+
+```powershell
+python scripts/select_roboflow_upload.py --preview
+python scripts/select_roboflow_upload.py
+```
+
+The selection manifest records the seed, image IDs, source matches, group hints,
+blocked files, and ZIP contents. See the dataset pipeline guide for limitations.
+After annotating and importing all desired images, complete `data/roboflow/review.csv`
+and review near-duplicate pairs. Every approved image requires a reviewed group.
+
+```powershell
+python scripts/prepare_dataset.py validate --work data/roboflow
+python scripts/prepare_dataset.py export --work data/roboflow
+```
+
+See the [Roboflow workflow](docs/DATA_PIPELINE.md#roboflow-prepare-all-unique-images-before-splitting)
+for upload limits, class mapping, negative images, and label revisions.
+
+### Compare Roboflow versions on Colab
+
+The [comparison notebook](notebooks/compare_roboflow_versions.ipynb) trains
+YOLO11s independently on Roboflow versions 2 and 3, checks their exports and
+compares validation metrics. Open it in Google Colab with a GPU and save a copy
+to Drive. It asks for a Roboflow API key privately and writes results to Drive.
+Manual annotation, source, preprocessing and group-boundary review is required
+before training; the filename audit alone cannot establish dataset equivalence.
+The held-out test split is not used for model selection.
+
 ## Repository structure
 
 ```text
 config/datasets.json          Kaggle source URLs
 download_datasets.py          Source downloader and download report
 scripts/prepare_dataset.py   Prepare, validate, and export commands
+scripts/roboflow_dataset.py  Prepare upload batches and import Roboflow COCO labels
 docs/DATA_PIPELINE.md         Complete annotation and export guide
 docs/AGENT_CONTEXT.md         Archived project and research context for agents
 AGENTS.md                     Instructions for agents working in this repository

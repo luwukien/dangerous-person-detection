@@ -29,6 +29,133 @@ before preparation; original XML/JSON/TXT annotations are inventoried, not impor
 
 ## Prepare and manually annotate
 
+### Roboflow: prepare all unique images before splitting
+
+Use this workflow to annotate on Roboflow and split locally afterward:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/roboflow_dataset.py prepare
+```
+
+This reads loose images and image members in ZIP files under `data/raw`, without
+modifying or extracting into the raw directory. Unsafe archive paths, damaged
+images/archives, unsupported files, and incomplete downloads are reported in
+`data/roboflow/inventory.json`. Videos are not sampled; ZIPs nested inside ZIPs
+are reported as unsupported members. Original weapon labels are inventoried only.
+
+The new `data/roboflow/` directory contains:
+
+- `images/`: EXIF-oriented, RGB, lossless PNGs named by pixel hash. Exact duplicates
+  across sources and archives share one image, with every origin in `manifest.json`.
+- `upload/`: images-only ZIPs. The first batch has up to 12 images for a pilot;
+  subsequent batches have up to 250 images. Each image belongs to exactly one batch.
+- `upload-manifest.json`: batch image IDs, SHA-256 checksums, and blocked images.
+  PNGs above 20 MB or 16400 x 10900 pixels stay locally and are explicitly blocked
+  from upload; there is no automatic resize. Resolve these before claiming all
+  images were uploaded. [Roboflow upload documentation](https://docs.roboflow.com/datasets/create-and-upload/adding-data.md).
+- `source_provenance.json`: copies and hashes of source download manifests and
+  available README/license notices. Missing source license information is not inferred.
+- `review.csv`, `near_duplicates.csv`, `group_suggestions.csv`, and `classes.txt`:
+  manual review records. Group suggestions derived from frame names require confirmation;
+  they do not populate approved groups automatically.
+
+The command refuses an existing work directory. Use `--work data/roboflow-v2`
+for another version; pass that same work path to import, validate, and export.
+
+#### Select up to 5,000 existing images for upload
+
+If `data/roboflow/images` already exists, select a smaller images-only upload
+without deleting or rewriting those PNGs:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/select_roboflow_upload.py --preview
+.\.venv\Scripts\python.exe scripts/select_roboflow_upload.py
+```
+
+The default target is the lesser of 5,000 and half of the eligible PNGs, using
+seed 42. Oversize or unreadable PNGs are excluded. The script uses an existing
+`manifest.json` when available; otherwise it scans `data/raw` and matches the
+prepared pixel hashes to recover source paths. Known frame sequences stay together,
+and sources are sampled in roughly their original proportions. Frame-name groups
+are suggestions only, not confirmed evaluation groups. Images without recoverable
+origins are marked `unknown`; their scene relationships still need manual review.
+No classes are inferred from unannotated images.
+
+`data/roboflow/upload-selected/selection-manifest.json` lists every selected ID,
+source, group hint, blocked image, and batch. Its `upload_status` entries start as
+`pending`; they do not prove that Roboflow received an image. Upload the ZIPs in
+that folder to your Roboflow Object Detection project and check Roboflow's counts.
+The script refuses to replace an existing selection directory, keeping the first
+selection reproducible. Use a different `--output` path for a new selection.
+
+#### Upload and annotate
+
+1. Create an **Object Detection** project. Upload only `upload/batch-0001.zip`
+   initially. Use the classes `normal_person` and `potentially_dangerous_person`.
+   Draw boxes around every person according to the policy below, not around weapons.
+2. If Roboflow requires a split, put all images into `train` temporarily. This
+   assignment is ignored when creating the final local split.
+3. Annotate the pilot. Export **COCO JSON**, disabling preprocessing (including
+   resize/crop) and augmentation. Keep the prepared image geometry unchanged.
+   [Roboflow COCO support](https://roboflow.com/formats/coco-json).
+4. Extract the export to a separate folder, then import it:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/roboflow_dataset.py import --export data/roboflow-export-pilot
+```
+
+Inspect the box previews under the `imports/<import-id>/previews/` path printed by
+the command. Confirm the boxes, classes and orientation match before uploading
+the remaining batches. A real Roboflow pilot requires your project and annotations;
+offline tests do not replace this check.
+
+After annotating the remaining images, export again with the same settings and
+run import with the new extracted folder. The importer reads COCO JSON across all
+export splits, maps class IDs by class name into the required local 0/1 order,
+and converts COCO pixel boxes to normalized YOLO boxes. Unused parent categories
+are allowed, but annotated unknown classes and crowd boxes are rejected.
+
+Original hash filenames and Roboflow suffixes such as `_png.rf.<token>.jpg` are
+matched back to the local manifest. Unknown names, changed dimensions, invalid
+boxes, and conflicting duplicate labels block import before labels are written.
+Export preprocessing that preserves dimensions cannot be detected from COCO
+metadata alone: disabling transformations and checking pilot previews is required.
+The local prepared PNGs remain the canonical images. Exported JSON documents and
+their hashes are saved under `imports/` for provenance.
+
+An identical import can be repeated. Existing differing labels are never replaced;
+for revisions, make a new copy of the work directory, remove only the affected
+label files from that copy, reset those review rows to `pending`, then import and
+review again. Do not change the original work version.
+
+#### Review, then split locally
+
+Import leaves `review.csv` unchanged. An image present in COCO with no boxes gets
+an empty label file but still requires explicit confirmation that no people are
+visible. Images absent from the export are listed in `import-report.json`; missing
+labels are never treated as negatives. The report describes the latest import;
+earlier import reports remain under `imports/`.
+
+Set `approved` only after reviewing every person/box, or `excluded` with a reason.
+Every approved image in this workflow must also have a manually reviewed `group`:
+use the same globally unique video/scene group across related frames and sources.
+If independence cannot be established, keep images pending or conservatively group
+the uncertain source together. A confirmed independent still image can have its
+own group. Neither old source split folders nor Unity `split-*` ZIP names establish
+independence. Review near-duplicate pairs; `pending` and `same` pairs stay together.
+
+```powershell
+.\.venv\Scripts\python.exe scripts/prepare_dataset.py validate --work data/roboflow
+.\.venv\Scripts\python.exe scripts/prepare_dataset.py export --work data/roboflow
+```
+
+This produces `data/dataset/{train,valid,test}` with an 80/10/10 target and seed 42.
+At least three independent groups are required. Actual ratios can differ because
+groups cannot be split. Inspect the export report and previews; freeze the test
+set before any future training. No split or training runs during preparation/import.
+
+### Other annotation tools
+
 ```powershell
 python scripts/prepare_dataset.py prepare
 ```
@@ -58,7 +185,7 @@ as PNG with unique content-based names. Raw files are unchanged.
    `notes`; filenames alone are not reliable evidence of independent scenes.
 6. Review `near_duplicates.csv`: set `decision` to `same` for related images or
    `different` for false matches. `pending` pairs are conservatively kept together
-   during splitting. Do not delete rows. Similarity uses a 64-bit perceptual hash
+   during splitting. Do not delete rows. Similarity uses a 64-bit difference hash
    at distance <=4 by default; it is a review aid and cannot find all duplicates.
 
 Do not convert weapon boxes into person boxes. Original weapon annotations are

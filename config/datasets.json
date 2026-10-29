@@ -1,6 +1,11 @@
 {
   "urls": [
+    "https://www.kaggle.com/datasets/trainingdatapro/people-with-guns-segmentation-and-detection/data",
     "https://www.kaggle.com/datasets/ugorjiir/gun-detection",
-    "https://www.kaggle.com/datasets/simuletic/cctv-weapon-detection-rifles-vs-umbrellas"
+    "https://www.kaggle.com/datasets/simuletic/cctv-weapon-detection-rifles-vs-umbrellas",
+    "https://www.kaggle.com/datasets/simuletic/cctv-weapon-dataset",
+    "https://www.kaggle.com/datasets/trainingdatapro/people-with-guns-segmentation-and-detection",
+    "https://www.kaggle.com/datasets/simuletic/cctv-knife-detection-dataset",
+    "https://www.kaggle.com/datasets/simuletic/weapon-detection-dataset-handgun-vs-bag-of-chips"
   ]
 }
