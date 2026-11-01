@@ -1,23 +1,27 @@
 # Hugging Face ZeroGPU demo
 
-Space trong `hf_space/` là một demo Gradio độc lập, không thay thế ứng dụng FastAPI chạy cục bộ. Chỉ tải video MP4, MOV, AVI hoặc MKV tối đa 20 MB và 15 giây. Kết quả MP4 không có âm thanh. Đây là hỗ trợ xem xét, không phải hệ thống ra quyết định an ninh; dự đoán có thể sai hoặc bỏ sót.
+The Space in `hf_space/` is a standalone Gradio demo, separate from the local FastAPI application. It accepts MP4, MOV, AVI, and MKV videos up to 20 MB and 15 seconds. Output MP4 videos have no audio. The demo supports human review and is not a security decision-making system; predictions may be incorrect or miss detections.
 
-## Chuẩn bị trước khi công khai
+Live Space: https://huggingface.co/spaces/luwukien/dangerous-person-detetion
 
-- Kiểm tra nguồn gốc và quyền phân phối dữ liệu huấn luyện, checkpoint, các thư viện và nội dung video mẫu. Các quyền này chưa được xác minh trong dự án. Không công khai checkpoint hoặc video khi chưa có quyền.
-- Checkpoint hiện có tại `model-comparison/yolo11s-fit-within-640/weights/best.pt`, SHA-256 `be638b965b2978e8abcd5ef506e63ba19743fd88a0582d2a96ffdc390a9ba3f5`. Chỉ sử dụng checkpoint đáng tin cậy, có các lớp 0 `normal_person`, 1 `potentially_dangerous_person`.
-- Cần tài khoản Hugging Face đủ điều kiện tạo Space ZeroGPU. Điều kiện, hàng đợi và quota có thể thay đổi; xem [tài liệu ZeroGPU](https://huggingface.co/docs/hub/spaces-zerogpu).
+## Preparing a deployment
 
-## Tạo Space
+- Review the provenance and distribution rights for the training data, checkpoint, dependencies, and sample videos. These rights have not been verified by this project. Only publish checkpoints and videos you have permission to distribute.
+- The local checkpoint is `model-comparison/yolo11s-fit-within-640/weights/best.pt`, SHA-256 `be638b965b2978e8abcd5ef506e63ba19743fd88a0582d2a96ffdc390a9ba3f5`. Use a trusted checkpoint with class 0 `normal_person` and class 1 `potentially_dangerous_person`.
+- Hosting on ZeroGPU requires an eligible Hugging Face account. Eligibility, queues, and quotas may change; consult the [ZeroGPU documentation](https://huggingface.co/docs/hub/spaces-zerogpu).
 
-1. Tạo Space mới tại Hugging Face, chọn **Gradio SDK** và phần cứng **ZeroGPU** (có thể chọn trong Settings nếu chưa thấy khi tạo). Chọn private trong lúc chuẩn bị nếu tài khoản cho phép.
-2. Upload nội dung của `hf_space/` lên **thư mục gốc của Space**: `README.md`, `app.py`, `video_processing.py`, `requirements.txt`. Không cần upload thư mục `tests`.
-3. Sau khi xác minh quyền phân phối, upload checkpoint nêu trên thành `best.pt` ở thư mục gốc của Space. Không upload dataset, token hoặc thông tin cá nhân. Space sẽ tự build; kiểm tra logs nếu có lỗi. Đặt `MODEL_PATH` trong Space nếu chọn một đường dẫn checkpoint khác.
-4. Thử một video ngắn được phép sử dụng. Xác nhận video đầu ra phát và tải được, đo thời gian từ lúc gửi tới lúc xong, và kiểm tra trong logs rằng GPU hoạt động. Nếu quá thời gian GPU hoặc quota, giảm thời lượng video và thử lại. ZeroGPU có thể xếp hàng hoặc từ chối khi hết quota; không bảo đảm luôn có GPU.
-5. Chỉ chuyển sang public sau khi xác minh quyền, nội dung và luồng hoạt động. Thêm URL Space và video quay màn hình dự phòng vào README/CV. Chưa có link công khai trong repository này.
+## Deploying or updating a Space
 
-Video tải lên và kết quả được lưu tạm trên máy chủ. Cache Gradio được cấu hình xóa theo chu kỳ; kết quả cũ hơn một giờ được dọn khi có yêu cầu tiếp theo, và dữ liệu tạm có thể còn lại khi tiến trình dừng bất thường. Không dùng video nhạy cảm. Không có cam kết lưu trữ lâu dài.
+1. For a new Space, select the **Gradio SDK** and **ZeroGPU** hardware. Use a private Space during preparation if your account supports it.
+2. Upload `README.md`, `app.py`, `video_processing.py`, and `requirements.txt` from `hf_space/` to the **Space repository root**. Do not upload tests or Python cache files. For an existing Space, upload only the changed files.
+3. Once distribution rights are verified, upload the checkpoint as `best.pt` at the repository root. Do not upload datasets, tokens, or personal information. Set `MODEL_PATH` if using a different checkpoint path. The Space rebuilds automatically after a commit; check its logs if the build fails.
+4. Test a short video you have permission to use. Verify playback and download, measure processing time, and confirm GPU operation in the logs. If GPU time or quota runs out, reduce video duration and retry. ZeroGPU may queue or reject requests when quota is exhausted.
+5. Before making a new Space public, verify its permissions, content, and complete workflow. Include its URL and a backup screen recording in your README or CV.
 
-## Kiểm thử cục bộ
+Uploaded videos and results are stored temporarily on the server. Gradio periodically clears its cache; results older than one hour are removed on a subsequent request. Temporary files may remain after an unexpected process termination. Do not use sensitive videos. Long-term storage is not guaranteed.
 
-Cài dependencies trong `hf_space/requirements.txt`, cùng phiên bản Gradio trong cấu hình Space, rồi chạy `python hf_space/app.py`. Ngoài Space, demo dùng CPU; checkpoint mặc định là `hf_space/best.pt` hoặc đường dẫn `MODEL_PATH`. Chạy `python -m unittest discover -s hf_space/tests -v` để kiểm tra xử lý video. GPU ZeroGPU và hàng đợi chỉ xác minh được trên Space.
+## Local testing
+
+Install `hf_space/requirements.txt` and the Gradio version specified in the Space metadata, then run `python hf_space/app.py`. Outside a Space, the demo uses CPU. The default checkpoint path is `hf_space/best.pt`; override it with `MODEL_PATH` as needed.
+
+Run `python -m unittest discover -s hf_space/tests -v` to test video processing. ZeroGPU and its queue must be verified on the deployed Space.
