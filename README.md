@@ -116,6 +116,20 @@ python scripts/inference.py path/to/image.jpg --weights model-comparison/yolo11s
 
 Pass `--weights` explicitly: the script's default still includes the old `kaggle-output/` prefix, while the inspected artifacts are under `model-comparison/`. Results are saved under a new `yolo11s-single-image` run directory in the selected output location.
 
+## Hugging Face deployment
+
+Try the hosted video demo on **[Hugging Face Spaces](https://huggingface.co/spaces/luwukien/dangerous-person-detetion)**. The deployment uses Gradio with Hugging Face ZeroGPU; its source is in [`hf_space/`](hf_space/).
+
+![Hugging Face Spaces video demo with upload, analysis and result download controls](docs/images/hugging-face-demo.png)
+
+1. Open the Space and upload an MP4, MOV, AVI or MKV video under **Video đầu vào / Input video**. Uploads are limited to **20 MB** and **15 seconds**.
+2. Click **Bắt đầu phân tích / Analyze video** and wait for processing to finish.
+3. Preview the annotated video under **Video kết quả / Result video**, then save it using **Tải video kết quả / Download result video**.
+
+The demo draws person boxes, labels and confidence scores frame by frame. Output videos have **no audio**. If the GPU is busy or its quota is exhausted, try again later.
+
+Files are processed temporarily on the server; do not upload sensitive videos. Predictions support human review and may be incorrect or miss detections. The `potentially_dangerous_person` label describes visible image context, not intent or actual threat level.
+
 ## Local video demo
 
 ### Stable labels in the video script
@@ -172,6 +186,7 @@ This single-user demo has no authentication; keep it bound to localhost. Working
 | `model-comparison/comparison.csv` | Supplied validation comparison |
 | `model-comparison/yolo11*-fit-within-640/` | Local arguments, logs, plots and checkpoints |
 | `video_app/` | Local FastAPI video demo and tests |
+| `hf_space/` | Gradio video demo source and Hugging Face Space configuration |
 | `docs/DATA_PIPELINE.md` | Annotation and provenance guidance; earlier tool references |
 | `docs/AGENT_CONTEXT.md` | Archived upstream research context |
 
