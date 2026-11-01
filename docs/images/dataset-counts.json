@@ -1,0 +1,23 @@
+[
+  {
+    "split": "train",
+    "images": 2911,
+    "normal_person": 6743,
+    "potentially_dangerous_person": 2684,
+    "empty_labels": 55
+  },
+  {
+    "split": "valid",
+    "images": 364,
+    "normal_person": 840,
+    "potentially_dangerous_person": 329,
+    "empty_labels": 10
+  },
+  {
+    "split": "test",
+    "images": 364,
+    "normal_person": 917,
+    "potentially_dangerous_person": 309,
+    "empty_labels": 6
+  }
+]

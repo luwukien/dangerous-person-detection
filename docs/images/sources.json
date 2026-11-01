@@ -1,0 +1,42 @@
+[
+  {
+    "file": "yolo11s-training-results.png",
+    "source": "model-comparison/yolo11s-fit-within-640/results.png",
+    "sha256": "51b95c437f8d210d6e48fc9293cac6b7c4ae1cf1472723092d482f92a8c9e125"
+  },
+  {
+    "file": "yolo11s-pr-curve.png",
+    "source": "model-comparison/yolo11s-fit-within-640/BoxPR_curve.png",
+    "sha256": "8827cd3bda99a0bc79d86903153d87e441b367f562c30a6f5570d9ae7ad3643a"
+  },
+  {
+    "file": "yolo11s-f1-curve.png",
+    "source": "model-comparison/yolo11s-fit-within-640/BoxF1_curve.png",
+    "sha256": "22ee6345ed66413ad39571d8200d2a518f30890708e55800ac6271deec11e814"
+  },
+  {
+    "file": "yolo11s-confusion-matrix.png",
+    "source": "model-comparison/yolo11s-fit-within-640/confusion_matrix_normalized.png",
+    "sha256": "f34d57294f86e648a6f2ef2ae8a45d8b2e638795f4210548bc2a410c6afa689c"
+  },
+  {
+    "file": "yolo11s-val-batch0-labels.jpg",
+    "source": "model-comparison/yolo11s-fit-within-640/val_batch0_labels.jpg",
+    "sha256": "ecdd75a1b4cf3cbd9bb9acdeda439697237f38a9d41d05751f235db8814caf29"
+  },
+  {
+    "file": "yolo11s-val-batch0-pred.jpg",
+    "source": "model-comparison/yolo11s-fit-within-640/val_batch0_pred.jpg",
+    "sha256": "9b228d16447d958c72037e523bdeb834d72f54fc0b0ce5de159891b431b93f73"
+  },
+  {
+    "file": "yolo11s-val-batch1-pred.jpg",
+    "source": "model-comparison/yolo11s-fit-within-640/val_batch1_pred.jpg",
+    "sha256": "d9fc5ac151b779a0dbdc6fbdaaa0c92c59c72abf291266d320b046be627b1a16"
+  },
+  {
+    "file": "yolo11s-val-batch2-pred.jpg",
+    "source": "model-comparison/yolo11s-fit-within-640/val_batch2_pred.jpg",
+    "sha256": "23a6458b00fd0cd56867b382fae83fac0f13d7992f49f97b75c7e11591212112"
+  }
+]

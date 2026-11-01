@@ -1,8 +1,30 @@
+<p align="center">
+  <img src="docs/images/project-banner.png" width="100%" alt="Dangerous Person Detection: YOLO11 image and video review, 3,639 images and four model variants" />
+</p>
+
 # Dangerous Person Detection
+
+<p align="center">
+  <a href="https://huggingface.co/spaces/luwukien/dangerous-person-detetion"><strong>Open the Hugging Face demo</strong></a>
+  &nbsp;·&nbsp; <a href="#prediction-gallery">Prediction gallery</a>
+  &nbsp;·&nbsp; <a href="#dataset">Dataset</a>
+  &nbsp;·&nbsp; <a href="#model-comparison">Model comparison</a>
+  &nbsp;·&nbsp; <a href="#training-configuration">Training</a>
+</p>
 
 Person-level object detection using Ultralytics YOLO11. The current experiments compare YOLO11n, YOLO11s, YOLO11m and YOLO11l on a two-class dataset, with locally available training logs, checkpoints, image inference code and an experimental video-review application.
 
 > **Project status:** research prototype. The validation results below describe this project's supplied comparison, not the original upstream study. The local application has not been evaluated as a production security system.
+
+## At a glance
+
+| Dataset | Detection classes | Model input | Default inference model | Best reported mAP50 |
+| --- | --- | --- | --- | --- |
+| **3,639 images** / **11,822 person instances** | 2 visual-context classes | 640 px | YOLO11s | **0.9444**, validation |
+
+![Workflow from dataset preparation through YOLO11 training, inference and human review](docs/images/system-workflow.png)
+
+*Figure 1. Project workflow. The hosted demo processes uploaded video; the local CLI also supports single-image inference.*
 
 ## Detection task
 
@@ -15,9 +37,43 @@ The model draws bounding boxes around **people**, rather than around weapons alo
 
 Class 1 describes visible image context. It does not establish identity, intent, guilt or a real-world threat level. Predictions require human review.
 
+## Prediction gallery
+
+These are saved **YOLO11s validation-batch predictions** from this project's `yolo11s-fit-within-640` run. The images retain their original boxes, labels, confidence values and filenames. They illustrate model behavior and may contain mistakes; they are not held-out test results or outputs from the hosted video demo.
+
+![YOLO11s validation batch 0 with person boxes, predicted classes and confidence scores](docs/images/yolo11s-val-batch0-pred.jpg)
+
+*Figure 2. Validation batch 0: person detections across indoor scenes. Open the image at full size to inspect individual boxes and labels.*
+
+<details>
+<summary><strong>Compare the dataset annotations with these predictions</strong></summary>
+
+![Dataset annotations for YOLO11s validation batch 0](docs/images/yolo11s-val-batch0-labels.jpg)
+
+*Figure 3. Dataset annotations for the same batch. Compare with Figure 2 to inspect differing labels, missing detections and extra boxes. Annotations themselves still require review.*
+
+</details>
+
+<details>
+<summary><strong>More prediction examples: validation batches 1 and 2</strong></summary>
+
+![YOLO11s predictions for validation batch 1](docs/images/yolo11s-val-batch1-pred.jpg)
+
+*Figure 4. Saved validation batch 1 predictions.*
+
+![YOLO11s predictions for validation batch 2](docs/images/yolo11s-val-batch2-pred.jpg)
+
+*Figure 5. Saved validation batch 2 predictions. These three batches are examples, not a complete error analysis.*
+
+</details>
+
 ## Dataset
 
 The local `datasets/` directory contains **3,639 images** and **11,822 labeled person instances**. These counts were checked directly against image and YOLO label files and agree with the saved image counts in the [dataset preparation notebook](notebooks/prepare_split_dataset_640_640_fitwithin.ipynb).
+
+![Dataset overview showing image counts and person-instance class counts in train, validation and test splits](docs/images/dataset-overview.png)
+
+*Figure 6. Image counts and labeled-person counts are shown separately. One image can contain several people; class 0 is more frequent than class 1 in every split.*
 
 | Split | Images | Class 0 instances | Class 1 instances | Total instances | Images with empty labels |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -49,6 +105,10 @@ The [dataset pipeline guide](docs/DATA_PIPELINE.md) retains annotation, provenan
 
 These **validation** metrics come from the locally supplied `model-comparison/comparison.csv`. The experiment owner confirmed the evaluation split; the CSV itself does not record the split, evaluation command, confidence threshold or hardware. These are reported artifacts, not a new evaluation performed for this documentation update.
 
+![Precision, recall, mAP50 and mAP50-95 for YOLO11n, YOLO11s, YOLO11m and YOLO11l](docs/images/model-comparison.png)
+
+*Figure 7. Four validation metrics on a common 0–1 scale. Values are drawn from the [supplied comparison CSV](docs/images/model-comparison.csv).*
+
 | Model | Precision | Recall | mAP50 | mAP50-95 | Inference (ms/image) | Weights (MB, CSV) | Training time (h) | Recorded epochs |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | YOLO11n | 0.8628 | 0.8907 | 0.9312 | 0.8101 | 3.97 | 5.25 | 2.036 | 141 |
@@ -63,6 +123,43 @@ These **validation** metrics come from the locally supplied `model-comparison/co
 Training times are **owner-reported decimal hours**: YOLO11m 3.04 h, YOLO11s 1 h 40 min (approximately 1.6667 h), YOLO11l 4 h 48 min (4.8 h), and YOLO11n 2.036 h. They are separate from the cumulative `time` column in training logs. Recorded epochs come from each run's `results.csv`, not the configured maximum.
 
 The CSV's weight sizes correspond to checkpoint bytes divided by 1,048,576 (MiB), although the column is labeled MB. Hardware and benchmark details are unavailable, so the inference times do not establish expected CPU, video or website performance. No held-out test metrics are reported here.
+
+![Reported inference time and checkpoint size for the four YOLO11 variants](docs/images/model-cost.png)
+
+*Figure 8. Reported inference time and checkpoint size from the same CSV. These are saved measurements, not a benchmark of the Hugging Face demo.*
+
+### Training and validation figures
+
+![Validation mAP50 and mAP50-95 across recorded epochs for all four YOLO11 variants](docs/images/training-history.png)
+
+*Figure 9. Curves plotted directly from each run's `results.csv`, without smoothing. Each model stops at its last recorded epoch; final-epoch values can differ from the checkpoint comparison above.*
+
+<details>
+<summary><strong>YOLO11s training losses and validation metrics</strong></summary>
+
+![Original YOLO11s training and validation loss, precision, recall and mAP plots](docs/images/yolo11s-training-results.png)
+
+*Figure 10. Original `results.png` from the 116-epoch YOLO11s run. The plotting tool's original results and smoothed traces are preserved.*
+
+</details>
+
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="docs/images/yolo11s-pr-curve.png" width="100%" alt="Saved YOLO11s precision-recall curves for both classes" /><br /><sub>Figure 11. Precision–recall curves.</sub></td>
+    <td width="50%" align="center"><img src="docs/images/yolo11s-confusion-matrix.png" width="100%" alt="Saved YOLO11s normalized confusion matrix including background" /><br /><sub>Figure 12. Normalized confusion matrix.</sub></td>
+  </tr>
+</table>
+
+These original plots come from the YOLO11s run directory. The precision–recall curves show the tradeoff as confidence changes; the confusion matrix includes background to expose unmatched predictions and missed objects. Their embedded scores belong to those saved plots and should not replace the separate comparison CSV. The exact plot-generation checkpoint and command were not recorded alongside the images.
+
+<details>
+<summary><strong>YOLO11s F1 versus confidence</strong></summary>
+
+![Saved YOLO11s F1 score plotted against confidence threshold](docs/images/yolo11s-f1-curve.png)
+
+*Figure 13. Original F1–confidence plot. Its peak summarizes this saved evaluation; it does not establish a deployment threshold.*
+
+</details>
 
 ## Training configuration
 
@@ -121,6 +218,8 @@ Pass `--weights` explicitly: the script's default still includes the old `kaggle
 Try the hosted video demo on **[Hugging Face Spaces](https://huggingface.co/spaces/luwukien/dangerous-person-detetion)**. The deployment uses Gradio with Hugging Face ZeroGPU; its source is in [`hf_space/`](hf_space/).
 
 ![Hugging Face Spaces video demo with upload, analysis and result download controls](docs/images/hugging-face-demo.png)
+
+*Figure 14. Hosted demo interface supplied by the project owner: upload a video, start analysis, preview the result and download it.*
 
 1. Open the Space and upload an MP4, MOV, AVI or MKV video under **Video đầu vào / Input video**. Uploads are limited to **20 MB** and **15 seconds**.
 2. Click **Bắt đầu phân tích / Analyze video** and wait for processing to finish.
@@ -187,10 +286,14 @@ This single-user demo has no authentication; keep it bound to localhost. Working
 | `model-comparison/yolo11*-fit-within-640/` | Local arguments, logs, plots and checkpoints |
 | `video_app/` | Local FastAPI video demo and tests |
 | `hf_space/` | Gradio video demo source and Hugging Face Space configuration |
+| `docs/images/` | README figures, original saved predictions, chart data and asset provenance |
+| `scripts/build_readme_assets.py` | Rebuild README figures from local datasets and experiment artifacts |
 | `docs/DATA_PIPELINE.md` | Annotation and provenance guidance; earlier tool references |
 | `docs/AGENT_CONTEXT.md` | Archived upstream research context |
 
 These paths describe the inspected working copy, including local files that may not be committed or distributed with Git. The README update alone does not distribute datasets, checkpoints or the local application. Obtain required artifacts separately before running their commands. Non-empty `best.pt` files were found for all four variants; some intermediate epoch checkpoints are empty, so filenames alone do not establish usable weights.
+
+The README images are stored in the repository so they render on GitHub without the local datasets or checkpoints. See [figure sources and regeneration instructions](docs/images/README.md) for provenance. Saved prediction and evaluation images are copied unchanged; the banner, workflow and summary charts are generated for this README.
 
 ## Research lineage and limitations
 
