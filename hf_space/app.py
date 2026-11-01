@@ -27,7 +27,7 @@ try:
 except Exception:
     logger.exception("Model loading failed")
     model = None
-    model_error = "Không thể tải model. Người quản trị cần kiểm tra checkpoint và cấu hình Space."
+    model_error = "Unable to load the model. The administrator should check the checkpoint and Space configuration."
 
 
 @spaces.GPU(duration=120)
@@ -59,20 +59,20 @@ def analyze(path, progress=gr.Progress()):
         raise gr.Error(str(exc)) from exc
     except Exception as exc:
         logger.exception("Video processing failed")
-        raise gr.Error("Không thể xử lý video. GPU có thể đang bận hoặc đã hết quota; hãy thử lại sau.") from exc
+        raise gr.Error("Unable to process the video. The GPU may be busy or its quota may be exhausted. Please try again later.") from exc
 
 
-with gr.Blocks(title="Phân tích video với YOLO", delete_cache=(3600, 3600)) as demo:
-    gr.Markdown("""# Phân tích video với YOLO
-Tải video lên để xem người được đánh dấu trong từng khung hình. Tối đa **20 MB, 15 giây**.
+with gr.Blocks(title="Video Analysis with YOLO", delete_cache=(3600, 3600)) as demo:
+    gr.Markdown("""# Video Analysis with YOLO
+Upload a video to view person detections in each frame. Maximum **20 MB, 15 seconds**.
 
-**Lưu ý:** Đây là công cụ hỗ trợ con người xem xét; dự đoán có thể sai hoặc bỏ sót. Nhãn `potentially_dangerous_person` mô tả ngữ cảnh hình ảnh, không xác định ý định hay mức độ nguy hiểm thực tế. Không tải video nhạy cảm; tệp được xử lý tạm thời trên máy chủ. Video kết quả không có âm thanh.""")
+**Note:** This tool supports human review; predictions may be incorrect or miss detections. The `potentially_dangerous_person` label describes visual context and does not determine intent or actual threat level. Do not upload sensitive videos; files are processed temporarily on the server. Output videos have no audio.""")
     if model_error:
         gr.Markdown(f"**{model_error}**")
-    video = gr.File(label="Video đầu vào", file_types=[".mp4", ".mov", ".avi", ".mkv"], type="filepath")
-    submit = gr.Button("Bắt đầu phân tích", variant="primary")
-    result = gr.Video(label="Video kết quả")
-    download = gr.File(label="Tải video kết quả")
+    video = gr.File(label="Input video", file_types=[".mp4", ".mov", ".avi", ".mkv"], type="filepath")
+    submit = gr.Button("Analyze video", variant="primary")
+    result = gr.Video(label="Result video")
+    download = gr.File(label="Download result video")
     submit.click(analyze, inputs=video, outputs=[result, download], concurrency_limit=1)
 
 demo.queue(max_size=5, default_concurrency_limit=1)

@@ -9,6 +9,6 @@ python_version: 3.10.13
 app_file: app.py
 ---
 
-# Demo phân tích video
+# Video Analysis Demo
 
-Demo hỗ trợ con người xem xét, không phải hệ thống ra quyết định an ninh. Dự đoán có thể sai; lớp `potentially_dangerous_person` chỉ mô tả ngữ cảnh hình ảnh. Video đầu vào tối đa 20 MB và 15 giây. Không tải video nhạy cảm.
+This demo supports human review and is not a security decision-making system. Predictions may be incorrect; the `potentially_dangerous_person` class describes visual context only. Input videos must be no larger than 20 MB and no longer than 15 seconds. Do not upload sensitive videos.

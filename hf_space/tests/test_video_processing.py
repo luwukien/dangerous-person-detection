@@ -60,14 +60,14 @@ class VideoTests(unittest.TestCase):
 
     def test_long_video(self):
         source = self.make_video(frames=76)
-        with self.assertRaisesRegex(ValueError, "15 giây"): video.validate_video(source)
+        with self.assertRaisesRegex(ValueError, "15 seconds"): video.validate_video(source)
 
     def test_duration_also_checked_while_decoding(self):
         source = self.make_video(frames=6)
         with patch.object(video, "MAX_SECONDS", 1), patch.object(video, "validate_video", return_value=(5, 5, 64, 64)):
             # Allowance of one frame guards against floating point drift.
             source = self.make_video(frames=7)
-            with self.assertRaisesRegex(ValueError, "15 giây"):
+            with self.assertRaisesRegex(ValueError, "15 seconds"):
                 video.process_video(source, self.root / "out.mp4", FakeModel(), "cpu")
 
 

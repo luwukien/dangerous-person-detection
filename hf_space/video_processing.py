@@ -15,21 +15,21 @@ EXPECTED = {0: "normal_person", 1: "potentially_dangerous_person"}
 
 def validate_video(path):
     if not path or not Path(path).is_file():
-        raise ValueError("Hãy chọn một video để phân tích.")
+        raise ValueError("Please select a video to analyze.")
     if Path(path).suffix.lower() not in {".mp4", ".mov", ".avi", ".mkv"}:
-        raise ValueError("Chỉ hỗ trợ video MP4, MOV, AVI hoặc MKV.")
+        raise ValueError("Only MP4, MOV, AVI, and MKV videos are supported.")
     size = os.path.getsize(path)
     if not size or size > MAX_BYTES:
-        raise ValueError("Video phải có dung lượng lớn hơn 0 và không quá 20 MB.")
+        raise ValueError("The video must be non-empty and no larger than 20 MB.")
     cap = cv2.VideoCapture(str(path))
     try:
         fps = cap.get(cv2.CAP_PROP_FPS)
         count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width, height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if not cap.isOpened() or not math.isfinite(fps) or not 0 < fps <= 120 or count <= 0 or not 0 < width <= 3840 or not 0 < height <= 2160:
-            raise ValueError("Không thể đọc video hoặc định dạng không được hỗ trợ.")
+            raise ValueError("Unable to read the video, or its format is unsupported.")
         if count / fps > MAX_SECONDS:
-            raise ValueError("Video không được dài quá 15 giây.")
+            raise ValueError("The video must be no longer than 15 seconds.")
         return fps, count, width, height
     finally:
         cap.release()
@@ -45,7 +45,7 @@ def process_video(path, output, model, device, progress=None):
         if not writer.isOpened():
             cap.release()
             writer.release()
-            raise ValueError("Không thể khởi tạo bộ mã hóa video.")
+            raise ValueError("Unable to initialize the video encoder.")
         n = 0
         try:
             while True:
@@ -54,18 +54,18 @@ def process_video(path, output, model, device, progress=None):
                     break
                 n += 1
                 if n > MAX_SECONDS * fps + 1:
-                    raise ValueError("Video không được dài quá 15 giây.")
+                    raise ValueError("The video must be no longer than 15 seconds.")
                 result = model.predict(frame, device=device, imgsz=640, verbose=False)[0]
                 writer.write(result.plot())
                 if progress and (n == 1 or n % max(1, int(fps)) == 0):
-                    progress(min(n / count * 0.95, 0.95), desc="Đang phân tích video")
+                    progress(min(n / count * 0.95, 0.95), desc="Analyzing video")
         finally:
             cap.release()
             writer.release()
         if not n:
-            raise ValueError("Video không có khung hình đọc được.")
+            raise ValueError("The video contains no readable frames.")
         if progress:
-            progress(0.97, desc="Đang tạo video kết quả")
+            progress(0.97, desc="Creating result video")
         subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-y", "-i", intermediate,
                         "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(output)],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
