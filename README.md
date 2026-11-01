@@ -1,121 +1,158 @@
 # Dangerous Person Detection
 
-An auditable dataset preparation pipeline for person detection in images containing potentially dangerous objects. This repository collects image sources, supports manual review of **person-level** annotations, and exports grouped YOLO detection splits for future model training.
+Person-level object detection using Ultralytics YOLO11. The current experiments compare YOLO11n, YOLO11s, YOLO11m and YOLO11l on a two-class dataset, with locally available training logs, checkpoints, image inference code and an experimental video-review application.
 
-> **Project status:** dataset preparation. This repository does not contain a trained checkpoint or a training/inference application. The results reported by the [original YOLO11 research project](https://github.com/Nambekai/dangerous-person-detection-yolo11) have not been reproduced here.
+> **Project status:** research prototype. The validation results below describe this project's supplied comparison, not the original upstream study. The local application has not been evaluated as a production security system.
 
-## What this project does
+## Detection task
 
-| Stage | Current implementation |
-| --- | --- |
-| Source collection | Download configured Kaggle datasets into `data/raw/` and record download outcomes. |
-| Image preparation | Normalize image orientation, preserve original files, collapse exact duplicates, and inventory source provenance; the Roboflow workflow also reads ZIP archives. |
-| Human annotation | Prepare images-only Roboflow upload batches, import COCO boxes into YOLO, and review every visible person with explicit approval, exclusion, and grouping records. |
-| Quality checks | Validate labels, image integrity, review status, and possible near-duplicate relationships before export. |
-| Dataset export | Create deterministic, group-aware `train` / `valid` / `test` splits, preview images, reports, and `config/data.yaml`. |
+The model draws bounding boxes around **people**, rather than around weapons alone.
 
-The prediction unit is a **person**, with two contextual classes:
-
-| ID | Class | Meaning |
+| ID | Class | Annotation meaning |
 | ---: | --- | --- |
 | 0 | `normal_person` | A reviewed person without clear visual evidence of the class 1 object association. |
-| 1 | `potentially_dangerous_person` | A reviewed person visibly holding, carrying, or operating a gun or knife under this dataset's annotation rules. |
+| 1 | `potentially_dangerous_person` | A reviewed person visibly holding, carrying or operating a gun or knife under the annotation rules. |
 
-Class 1 describes visible image context. It does not establish anyone's identity, intent, guilt, or real-world threat level. Outputs from any future model should be reviewed by a human.
+Class 1 describes visible image context. It does not establish identity, intent, guilt or a real-world threat level. Predictions require human review.
 
-## Quick start
+## Dataset
 
-Requirements: Python 3.10 or newer, access to the configured Kaggle datasets, and an annotation tool that exports YOLO detection labels.
+The local `datasets/` directory contains **3,639 images** and **11,822 labeled person instances**. These counts were checked directly against image and YOLO label files and agree with the saved image counts in the [dataset preparation notebook](notebooks/prepare_split_dataset_640_640_fitwithin.ipynb).
+
+| Split | Images | Class 0 instances | Class 1 instances | Total instances | Images with empty labels |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Train | 2,911 | 6,743 | 2,684 | 9,427 | 55 |
+| Validation | 364 | 840 | 329 | 1,169 | 10 |
+| Test | 364 | 917 | 309 | 1,226 | 6 |
+| **Total** | **3,639** | **8,500** | **3,322** | **11,822** | **71** |
+
+There is one label file per image, with no missing label files in the inspected copy. An empty label file contains no annotated boxes; this alone does not prove that the image was manually reviewed. Image counts and person-instance counts are different quantities.
+
+### Sources and preparation
+
+The notebook downloads these Roboflow exports from `chikiens-workspace` in YOLO format:
+
+| Roboflow project | Version | Train images | Validation images | Test images |
+| --- | ---: | ---: | ---: | ---: |
+| `1-prj-person-detection-dataset` | 2 | 800 | 100 | 100 |
+| `2-prj-person-detection-dataset` | 1 | 799 | 100 | 100 |
+| `3-prj-person-detection-dataset` | 1 | 800 | 100 | 100 |
+| `4-prj-person-detection-dataset` | 1 | 512 | 64 | 64 |
+
+It merges the existing `train`, `valid` and `test` directories, prefixes filenames with `ds1_` through `ds4_` to prevent overwriting, and writes a combined `data.yaml`. The resulting proportions are approximately 80/10/10. Despite its filename, the notebook does not implement resizing; the verified model input setting is `imgsz=640` during training and inference.
+
+**Split limitation:** preserving source splits and adding filename prefixes does not establish scene independence or remove duplicates. Manual annotation review, source provenance checks, and checks for related frames or duplicate content across splits remain necessary. Keep related images in the same reviewed group and freeze the test set before selecting models or tuning thresholds.
+
+The [dataset pipeline guide](docs/DATA_PIPELINE.md) retains annotation, provenance and grouped-splitting guidance. Its downloader and preparation commands refer to earlier tooling absent from the current working copy. Use the notebook and scripts described here for the present workflow. The URLs in [config/datasets.json](config/datasets.json) are collection references, not proof that each source contributed to this merged dataset.
+
+## Model comparison
+
+These **validation** metrics come from the locally supplied `model-comparison/comparison.csv`. The experiment owner confirmed the evaluation split; the CSV itself does not record the split, evaluation command, confidence threshold or hardware. These are reported artifacts, not a new evaluation performed for this documentation update.
+
+| Model | Precision | Recall | mAP50 | mAP50-95 | Inference (ms/image) | Weights (MB, CSV) | Training time (h) | Recorded epochs |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| YOLO11n | 0.8628 | 0.8907 | 0.9312 | 0.8101 | 3.97 | 5.25 | 2.036 | 141 |
+| YOLO11s | 0.8759 | 0.8731 | **0.9444** | 0.8213 | 6.82 | 18.28 | 1.6667 | 116 |
+| YOLO11m | 0.8398 | **0.9065** | 0.9355 | **0.8219** | 17.78 | 38.64 | 3.04 | 133 |
+| YOLO11l | **0.8813** | 0.8855 | 0.9316 | 0.8188 | 22.97 | 48.82 | 4.8 | 150 |
+
+- **YOLO11s** has the highest reported mAP50 and is the default variant referenced by the inference code.
+- **YOLO11m** has the highest reported recall and mAP50-95; **YOLO11l** has the highest precision.
+- **YOLO11n** has the lowest reported inference time and smallest checkpoint.
+
+Training times are **owner-reported decimal hours**: YOLO11m 3.04 h, YOLO11s 1 h 40 min (approximately 1.6667 h), YOLO11l 4 h 48 min (4.8 h), and YOLO11n 2.036 h. They are separate from the cumulative `time` column in training logs. Recorded epochs come from each run's `results.csv`, not the configured maximum.
+
+The CSV's weight sizes correspond to checkpoint bytes divided by 1,048,576 (MiB), although the column is labeled MB. Hardware and benchmark details are unavailable, so the inference times do not establish expected CPU, video or website performance. No held-out test metrics are reported here.
+
+## Training configuration
+
+The local entry point is `scripts/train.py`. Its settings agree with the saved `args.yaml` files under `model-comparison/yolo11*-fit-within-640/`:
+
+| Setting | Value |
+| --- | --- |
+| Task | Two-class person detection |
+| Initialization | Pretrained `yolo11n.pt`, `yolo11s.pt`, `yolo11m.pt`, `yolo11l.pt` |
+| Input size / batch size | `imgsz=640` / 8 |
+| Maximum epochs | 150 |
+| Early-stopping patience | 35 for n/s; 40 for m/l |
+| Optimizer | `auto` |
+| Seed / deterministic | 42 / `True` |
+| Mixed precision / data workers | AMP enabled / 2 |
+| Horizontal / vertical flip | 0.5 / 0.0 |
+| Mosaic / MixUp | 1.0 / 0.0 |
+| Close mosaic | Final 10 epochs |
+| Checkpoint interval | Every 10 epochs, plus best checkpoint |
+| Recorded training device | CUDA device `0`; GPU model not recorded in the inspected artifacts |
+
+The actual optimizer selected by `auto` and the exact training environment are not established by these settings. The local video dependency file pins `ultralytics==8.4.197`; this does not establish the version used for all training runs.
+
+### Run training
+
+The following commands assume the local training script and dataset have been supplied; a fresh Git clone may not include them. Create and activate a Python environment from the project root:
 
 ```powershell
-git clone https://github.com/luwukien/dangerous-person-detection.git
-cd dangerous-person-detection
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python download_datasets.py
-python scripts/prepare_dataset.py prepare
+python -m pip install ultralytics
 ```
 
-The default source URLs are in [`config/datasets.json`](config/datasets.json). Kaggle may require authentication; keep credentials outside the repository. Extract image archives nested inside downloaded datasets before running `prepare`.
-
-Preparation creates `data/annotation/`. Annotate its images with the class order in `classes.txt`, save YOLO labels under `labels/`, complete `review.csv`, and review `near_duplicates.csv`. An approved image with no people still needs an empty label file. Related frames and images must share a group so they cannot cross evaluation splits.
+Update `datasets/data.yaml` so `path` points to your absolute local `datasets` directory. Keep `train: train/images`, `val: valid/images`, `test: test/images` and the class order above. The inspected YAML still points to `/content/drive/MyDrive/datasets`, so it requires this change before local use.
 
 ```powershell
-python scripts/prepare_dataset.py validate
-python scripts/prepare_dataset.py export
-python -m unittest discover -s tests -v
+python scripts/train.py --variant yolo11s --data datasets/data.yaml --device 0 --project runs/train
 ```
 
-Export produces `data/dataset/` and `config/data.yaml`. Inspect `report.json` and the split previews before using the data. Existing work and export directories are protected against overwrite; choose new paths for a new dataset version.
+Use `--variant yolo11n`, `yolo11m` or `yolo11l` for other models, or `--device cpu` for CPU training. The default run name is `<variant>-fit-within-640`; existing run directories are not overwritten.
 
-For the annotation policy, review fields, provenance rules, retry options, and output details, follow the [dataset pipeline guide](docs/DATA_PIPELINE.md).
+For Kaggle, point the dataset YAML at the mounted dataset and pass it with `--data`. Recorded runs used `/kaggle/working/data_kaggle.yaml` and wrote outputs under `/kaggle/working/model-comparison`. Preserve the resolved configuration, environment, checkpoint and evaluation command with future results.
 
-### Annotate on Roboflow before splitting
+## Image inference
+
+The [image inference script](scripts/inference.py) accepts an image, optional `--weights`, and optional `--output`. It uses `imgsz=640`, confidence threshold **0.25**, and CUDA device 0 when available, otherwise CPU. It saves an annotated image and prints classes, confidence scores and box coordinates.
 
 ```powershell
-python scripts/roboflow_dataset.py prepare
-# Upload data/roboflow/upload/batch-0001.zip first for a small pilot.
-# Annotate on Roboflow, export COCO JSON without preprocessing/augmentation,
-# and extract the export into data/roboflow-export-pilot.
-python scripts/roboflow_dataset.py import --export data/roboflow-export-pilot
+python scripts/inference.py path/to/image.jpg --weights model-comparison/yolo11s-fit-within-640/weights/best.pt --output inference-results
 ```
 
-Inspect the imported box previews before uploading the remaining batches. This
-workflow reads loose images and ZIPs from `data/raw`, preserves all sources, and
-creates `data/roboflow/images` plus upload ZIPs without splitting the dataset.
-To upload at most 5,000 images (and no more than half of eligible images) from an
-existing `data/roboflow/images` directory, use the subset command below. It creates
-new images-only ZIPs under `data/roboflow/upload-selected` and leaves the originals
-untouched. Upload those ZIPs manually to your Roboflow Object Detection project.
+Pass `--weights` explicitly: the script's default still includes the old `kaggle-output/` prefix, while the inspected artifacts are under `model-comparison/`. Results are saved under a new `yolo11s-single-image` run directory in the selected output location.
+
+## Local video demo
+
+The local `video_app/` application accepts MP4, MOV, AVI and MKV uploads, displays progress, and produces a downloadable MP4 with person boxes, labels and confidence scores. It processes frames on **CPU**, one video at a time; output has no audio.
+
+With the local application files and checkpoint available, run:
 
 ```powershell
-python scripts/select_roboflow_upload.py --preview
-python scripts/select_roboflow_upload.py
+python -m pip install -r video_app/requirements.txt
+$env:MODEL_PATH = (Resolve-Path "model-comparison/yolo11s-fit-within-640/weights/best.pt").Path
+python -m uvicorn video_app.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-The selection manifest records the seed, image IDs, source matches, group hints,
-blocked files, and ZIP contents. See the dataset pipeline guide for limitations.
-After annotating and importing all desired images, complete `data/roboflow/review.csv`
-and review near-duplicate pairs. Every approved image requires a reviewed group.
+Open `http://127.0.0.1:8000`. `MODEL_PATH` overrides the old checkpoint path. Optional positive integer environment variables `MAX_VIDEO_MB` and `MAX_VIDEO_SECONDS` limit upload size and duration; both limits are disabled by default. Supported decoding is limited to 3840 x 2160 and 120 FPS.
 
-```powershell
-python scripts/prepare_dataset.py validate --work data/roboflow
-python scripts/prepare_dataset.py export --work data/roboflow
-```
+This single-user demo has no authentication; keep it bound to localhost. Working files are temporary and removed on normal shutdown; download results before stopping it. Abrupt termination may leave temporary files. The local `docs/VIDEO_DEMO.md` has additional usage details, but its default checkpoint path also retains the old prefix. No Azure deployment is claimed here.
 
-See the [Roboflow workflow](docs/DATA_PIPELINE.md#roboflow-prepare-all-unique-images-before-splitting)
-for upload limits, class mapping, negative images, and label revisions.
+## Files and artifacts
 
-### Compare Roboflow versions on Colab
+| Path | Purpose |
+| --- | --- |
+| `notebooks/prepare_split_dataset_640_640_fitwithin.ipynb` | Roboflow downloads, split-preserving merge and saved counts |
+| `datasets/{train,valid,test}/{images,labels}` | Local images and YOLO labels |
+| `datasets/data.yaml` | Local dataset paths and class mapping |
+| `scripts/train.py` | Local YOLO11 training entry point |
+| `scripts/inference.py` | Single-image inference CLI |
+| `model-comparison/comparison.csv` | Supplied validation comparison |
+| `model-comparison/yolo11*-fit-within-640/` | Local arguments, logs, plots and checkpoints |
+| `video_app/` | Local FastAPI video demo and tests |
+| `docs/DATA_PIPELINE.md` | Annotation and provenance guidance; earlier tool references |
+| `docs/AGENT_CONTEXT.md` | Archived upstream research context |
 
-The [comparison notebook](notebooks/compare_roboflow_versions.ipynb) trains
-YOLO11s independently on Roboflow versions 2 and 3, checks their exports and
-compares validation metrics. Open it in Google Colab with a GPU and save a copy
-to Drive. It asks for a Roboflow API key privately and writes results to Drive.
-Manual annotation, source, preprocessing and group-boundary review is required
-before training; the filename audit alone cannot establish dataset equivalence.
-The held-out test split is not used for model selection.
-
-## Repository structure
-
-```text
-config/datasets.json          Kaggle source URLs
-download_datasets.py          Source downloader and download report
-scripts/prepare_dataset.py   Prepare, validate, and export commands
-scripts/roboflow_dataset.py  Prepare upload batches and import Roboflow COCO labels
-docs/DATA_PIPELINE.md         Complete annotation and export guide
-docs/AGENT_CONTEXT.md         Archived project and research context for agents
-AGENTS.md                     Instructions for agents working in this repository
-tests/                       Offline pipeline tests
-```
-
-Generated data and local environments are excluded from Git. Downloaded sources and annotations require their own provenance and license review before redistribution.
+These paths describe the inspected working copy, including local files that may not be committed or distributed with Git. The README update alone does not distribute datasets, checkpoints or the local application. Obtain required artifacts separately before running their commands. Non-empty `best.pt` files were found for all four variants; some intermediate epoch checkpoints are empty, so filenames alone do not establish usable weights.
 
 ## Research lineage and limitations
 
-This work takes its **person-level detection task** from [Tran Si Nam's YOLO11 research prototype](https://github.com/Nambekai/dangerous-person-detection-yolo11). The original project reports a 3,140-image dataset and YOLO11s test results, including mAP50 of 0.80. Those figures describe the original study only; this repository's new dataset has no published model results. The archived [agent context](docs/AGENT_CONTEXT.md) retains the earlier project description for development reference.
+This work takes its person-level task from [Tran Si Nam's YOLO11 research prototype](https://github.com/Nambekai/dangerous-person-detection-yolo11). The [archived context](docs/AGENT_CONTEXT.md) preserves that study's description. Its dataset and test metrics are historical upstream results and must not be substituted for the dataset counts and validation comparison above.
 
-Manual annotation, source permissions, scene grouping, and review of false positives and missed people remain essential. Similarity checks cannot detect every related image, and group-preserving splits may differ from the requested 80/10/10 proportions. Keep the test split frozen when training or tuning a future model.
+Manual review of annotations, source permissions, related scenes, false positives and missed people remains essential. The available merge code does not verify independence between splits, and the supplied comparison lacks a complete evaluation record. Keep the test split separate from model selection and threshold tuning. No production security reliability or deployment performance is established by these experiments.
 
-This repository currently does not declare a license for its own code or data. Check the [original project's license](https://github.com/Nambekai/dangerous-person-detection-yolo11/blob/main/LICENSE) and each source dataset's terms before reuse or redistribution.
+The repository does not declare a license for its own code or data. Review dataset terms, checkpoint provenance and applicable software licenses before reuse or redistribution. Keep API keys and credentials outside committed files.
