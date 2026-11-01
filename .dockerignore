@@ -1,0 +1,9 @@
+**
+!video_app/
+!video_app/**
+!kaggle-output/
+!kaggle-output/model-comparison/
+!kaggle-output/model-comparison/yolo11s-fit-within-640/
+!kaggle-output/model-comparison/yolo11s-fit-within-640/weights/
+!kaggle-output/model-comparison/yolo11s-fit-within-640/weights/best.pt
+!Dockerfile.video

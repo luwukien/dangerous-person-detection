@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 YOLO_CONFIG_DIR=/tmp/ultralytics
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libglib2.0-0 libgl1 && rm -rf /var/lib/apt/lists/*
+COPY video_app/requirements.txt /app/video_app/requirements.txt
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision && pip install --no-cache-dir -r video_app/requirements.txt
+COPY video_app /app/video_app
+COPY kaggle-output/model-comparison/yolo11s-fit-within-640/weights/best.pt /app/model/best.pt
+ENV MODEL_PATH=/app/model/best.pt
+RUN useradd --create-home --uid 10001 appuser
+USER appuser
+EXPOSE 8000
+CMD ["uvicorn", "video_app.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]

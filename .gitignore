@@ -4,3 +4,17 @@ data/
 runs/
 .env
 kaggle.json
+
+# Local datasets, model artifacts, and inference media
+datasets/
+model-comparison/
+kaggle-output/
+inference-results/
+test-video-img/
+*.pt
+*.onnx
+
+# Local test and tool caches
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/

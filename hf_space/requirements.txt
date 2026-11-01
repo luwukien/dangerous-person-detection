@@ -1,0 +1,5 @@
+torch==2.8.0
+torchvision==0.23.0
+ultralytics==8.4.197
+spaces>=0.41,<1
+imageio-ffmpeg>=0.5,<1

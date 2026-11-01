@@ -1,0 +1,6 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+python-multipart>=0.0.18,<1
+ultralytics==8.4.197
+imageio-ffmpeg>=0.5,<1
+lap>=0.5.12,<1

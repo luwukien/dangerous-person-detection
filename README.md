@@ -118,6 +118,34 @@ Pass `--weights` explicitly: the script's default still includes the old `kaggle
 
 ## Local video demo
 
+### Stable labels in the video script
+
+`run_video.py` uses a separate ByteTrack instance per video, class-agnostic NMS
+to reduce overlapping boxes with conflicting classes, and confidence-weighted
+votes per track over the last 0.6 seconds. A label needs at least 0.2 seconds of
+consecutive detections and 75% weighted agreement; until then it is `pending`.
+Both label changes are allowed. Missing detections reset the evidence window;
+tracks and label history expire after approximately 0.5 seconds without a match.
+Boxes are drawn only for current matched detections.
+
+```powershell
+python -m pip install -r video_app/requirements.txt
+python run_video.py test-video-img/test.mp4 --output inference-results/Download_yolo11s_stable.mp4
+```
+
+The script preserves existing outputs, uses the same model, `imgsz=640` and
+`conf=0.5` as the earlier video script, and writes CSV observations and a JSON
+switch-count summary beside the MP4. `--raw` restores per-frame rendering for
+comparison. Stabilized labels omit confidence because a current detection's
+score may belong to a different class. The CSV retains raw scores.
+
+These settings reduce display flicker but add delay and can preserve an incorrect
+label during ambiguous evidence. They do not improve or measure model accuracy.
+Switch counts compare raw and filtered classes on matched tracks after NMS;
+they exclude unmatched detections and are not an accuracy evaluation. Occlusion,
+crossing people and scene cuts can still break tracking. The separate web demos
+below continue to use their existing per-frame inference.
+
 The local `video_app/` application accepts MP4, MOV, AVI and MKV uploads, displays progress, and produces a downloadable MP4 with person boxes, labels and confidence scores. It processes frames on **CPU**, one video at a time; output has no audio.
 
 With the local application files and checkpoint available, run:
