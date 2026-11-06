@@ -120,15 +120,16 @@ def main():
             ax.legend(loc="upper right", fontsize=8, frameon=False)
     save(fig, "dataset-overview.png")
 
+    test_rows = read_csv(OUT / "test-comparison.csv")
     fig, axes = plt.subplots(2, 2, figsize=(12, 8), layout="constrained")
     for ax, key in zip(axes.flat, ["Precision", "Recall", "mAP50", "mAP50-95"]):
-        bars = ax.bar([r["Model"] for r in rows], [float(r[key]) for r in rows], color=COLORS, width=0.55)
+        bars = ax.bar([r["Model"] for r in test_rows], [float(r[key]) for r in test_rows], color=COLORS, width=0.55)
         ax.bar_label(bars, fmt="%.4f", padding=4, fontsize=10)
-        ax.set(title=key, ylim=(0, 1.08), ylabel="Validation score")
+        ax.set(title=key, ylim=(0, 1.08), ylabel="Test score")
         ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
         ax.grid(axis="y", alpha=0.15); ax.set_axisbelow(True)
-    fig.suptitle("Reported validation comparison", fontsize=20, weight="bold")
-    save(fig, "model-comparison.png")
+    fig.suptitle("Test-set comparison", fontsize=20, weight="bold")
+    save(fig, "test-set-comparison.png")
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4), layout="constrained")
     for ax, key, title, unit in [(axes[0], "Inference (ms/ảnh)", "Reported inference time", "ms / image"),

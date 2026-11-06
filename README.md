@@ -103,11 +103,26 @@ The [dataset pipeline guide](docs/DATA_PIPELINE.md) retains annotation, provenan
 
 ## Model comparison
 
-These **validation** metrics come from the locally supplied `model-comparison/comparison.csv`. The experiment owner confirmed the evaluation split; the CSV itself does not record the split, evaluation command, confidence threshold or hardware. These are reported artifacts, not a new evaluation performed for this documentation update.
+The following test-set comparison evaluates all four local `best.pt` checkpoints on the same 364-image test split. Each run used Ultralytics 8.4.197, Python 3.14.5 and PyTorch 2.15.0+cpu on an AMD Ryzen 7 5800U, with `imgsz=640`, `batch=8`, `workers=0`, and default validation confidence and IoU thresholds. The split has not been checked for duplicate or related scenes across splits. Do not use the test set for model selection or threshold tuning.
 
-![Precision, recall, mAP50 and mAP50-95 for YOLO11n, YOLO11s, YOLO11m and YOLO11l](docs/images/model-comparison.png)
+### YOLO11s test-set evaluation
 
-*Figure 7. Four validation metrics on a common 0–1 scale. Values are drawn from the [supplied comparison CSV](docs/images/model-comparison.csv).*
+The local YOLO11s `best.pt` checkpoint was evaluated on 6 November 2026 using the local test split (364 images, 1,226 labeled instances). Ultralytics 8.4.197, PyTorch 2.15.0+cpu and Python 3.14.5 were used on an AMD Ryzen 7 5800U CPU, with `imgsz=640`, `batch=8`, `workers=0` and Ultralytics validation defaults for confidence and IoU thresholds. Values are rounded to three decimals.
+
+| Class | Images | Instances | Precision | Recall | mAP50 | mAP50-95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| All | 364 | 1,226 | 0.858 | 0.898 | 0.933 | 0.811 |
+| normal_person | 178 | 917 | 0.881 | 0.877 | 0.922 | 0.771 |
+| potentially_dangerous_person | 251 | 309 | 0.835 | 0.919 | 0.943 | 0.852 |
+
+
+![Precision, recall, mAP50 and mAP50-95 for YOLO11n, YOLO11s, YOLO11m and YOLO11l](docs/images/test-set-comparison.png)
+
+*Figure 7. Test-set metrics on a common 0–1 scale, from the [test comparison CSV](docs/images/test-comparison.csv). Results are rounded to four decimals.*
+
+### Previously reported validation results
+
+The table below comes from the supplied validation comparison CSV. Its evaluation command, confidence threshold and hardware were not recorded; these numbers are separate from the test results above.
 
 | Model | Precision | Recall | mAP50 | mAP50-95 | Inference (ms/image) | Weights (MB, CSV) | Training time (h) | Recorded epochs |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -122,7 +137,7 @@ These **validation** metrics come from the locally supplied `model-comparison/co
 
 Training times are **owner-reported decimal hours**: YOLO11m 3.04 h, YOLO11s 1 h 40 min (approximately 1.6667 h), YOLO11l 4 h 48 min (4.8 h), and YOLO11n 2.036 h. They are separate from the cumulative `time` column in training logs. Recorded epochs come from each run's `results.csv`, not the configured maximum.
 
-The CSV's weight sizes correspond to checkpoint bytes divided by 1,048,576 (MiB), although the column is labeled MB. Hardware and benchmark details are unavailable, so the inference times do not establish expected CPU, video or website performance. No held-out test metrics are reported here.
+The CSV's weight sizes correspond to checkpoint bytes divided by 1,048,576 (MiB), although the column is labeled MB. Hardware and benchmark details are unavailable, so the inference times do not establish expected CPU, video or website performance. The test evaluation above is separate from these reported validation measurements.
 
 ![Reported inference time and checkpoint size for the four YOLO11 variants](docs/images/model-cost.png)
 

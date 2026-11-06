@@ -1,0 +1,5 @@
+YOLO11s test evaluation, 2026-11-06
+Class,images,instances,precision,recall,mAP50,mAP50-95
+all,364,1226,0.858,0.898,0.933,0.811
+normal_person,178,917,0.881,0.877,0.922,0.771
+potentially_dangerous_person,251,309,0.835,0.919,0.943,0.852
